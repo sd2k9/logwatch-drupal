@@ -1,5 +1,6 @@
 Logwatch
 ********
+- Take an often used file as base, like ssh or dpkg
 
 Log-Format
 ==========
@@ -34,23 +35,30 @@ http://website.org:8080|\d+|user|10.0.2.2|http://website.org:8080/user|http://we
 http://website.org:8080|\d+|user|10.0.2.2|http://website.org:8080/user/logout|http://website.org:8080/|1||Session closed for sroot.
 --> Count login/logout as done with ssh
 
-http://website.org:8080|\d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
-http://website.org:8080|\d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
-http://website.org:8080|\d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
---> List as found in dpkg
-
-http://website.org:8080|\d+|php|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|3||Warning: Invalid argument supplied for foreach() in element_children() (line 6046 of /home/drupal/drupal7/includes/common.inc).
-https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$argument in calendar_plugin_style->query() (line 129 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
-https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$min_date in calendar_plugin_style->query() (line 131 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
---> List of PHP messages as found in dpkg
-
 http://website.org:8080|\d+|cron|10.0.2.2|http://website.org:8080/||0||Cron run completed.
 http://default/home/drupal/drupal7/scripts|\d+|cron|127.0.0.1|http://default/cron.php||0||Cron run completed.
 --> Count as done with ssh
 
 http://website.org:8080|\d+|page not found|10.0.2.2|http://website.org:8080/node/5000||1||node/5000
 http://website.org:8080|\d+|access denied|10.0.2.2|http://website.org:8080/user/1||0||user/1
---> List as found in httpd
+--> Count as done with ssh
+
+ Users logging in through sshd:
+    sd2k9:
+       12.3.145.167 (url.net): 1 time
+
+http://website.org:8080|\d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
+http://website.org:8080|\d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
+http://website.org:8080|\d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
+--> List as found in dpkg
+
+https://website.org:8443|\d+|i18n_string|10.0.2.2|https://website.org:8443/en/batch?id=20&op=do|https://website.org:8443/en/batch?op=start&id=20|3||Updated string node:type:event:name for textgroup node: Map Event
+--> List (by action) as found in dpkg
+
+http://website.org:8080|\d+|php|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|3||Warning: Invalid argument supplied for foreach() in element_children() (line 6046 of /home/drupal/drupal7/includes/common.inc).
+https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$argument in calendar_plugin_style->query() (line 129 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
+https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$min_date in calendar_plugin_style->query() (line 131 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
+--> List of PHP messages as found in dpkg
 
 https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/add/page|https://website.org:8443/en/node/add/page|3|view|page: added Folgen.
 http://website.org:8080|\d+|content|10.0.2.2|http://website.org:8080/node/1/edit|http://website.org:8080/node/1/edit|2|view|page: updated Impressum.
@@ -59,5 +67,11 @@ https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/3
 https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/admin/content|https://website.org:8443/en/admin/content|3||Deleted 13 posts.
 --> List (by action) as found in dpkg
 
-https://website.org:8443|\d+|i18n_string|10.0.2.2|https://website.org:8443/en/batch?id=20&op=do|https://website.org:8443/en/batch?op=start&id=20|3||Updated string node:type:event:name for textgroup node: Map Event
---> List (by action) as found in dpkg
+ Upgraded:
+    libtiff4 3.9.4-5+squeeze7 => 3.9.4-5+squeeze8
+
+Everything else
+-->  Unmatched List as in dovecot
+
+ **Unmatched Entries**
+    dovecot: auth-worker(default): mysql: Connected to localhost (maildb): 1 Time(s)
