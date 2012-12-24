@@ -30,6 +30,7 @@ my %enable  = ();
 my %disable = ();
 my %unknown = ();
 my %php     = ();
+my %content = ();
 # This dummy hash just keeps track about all possible sites
 my %avlsites = ();
 
@@ -95,7 +96,22 @@ while(my $line=<STDIN>) {
 
     # *** Now take care about php messages
     } elsif ( $cat eq "php" ) {
+	# Template:
+	# https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$argument in calendar_plugin_style->query() (line 129 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
 	push @{$php{$site} }, $msg;
+
+    # *** And now let's go for content modification
+    } elsif ( $cat eq "content" ) {
+	# Template:
+        # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/add/page|https://website.org:8443/en/node/add/page|3|view|page: added Folgen.
+        # http://website.org:8080|\d+|content|10.0.2.2|http://website.org:8080/node/1/edit|http://website.org:8080/node/1/edit|2|view|page: updated Impressum.
+        # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/10/revisions/11/delete|https://website.org:8443/en/node/10/revisions/11/delete|3||image_container: deleted User Pictures revision 11.
+        # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/32/delete|https://website.org:8443/en/node/32/delete|3||page: deleted Folgen.
+        # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/admin/content|https://website.org:8443/en/admin/content|3||Deleted 13 posts.
+        # First simple approach: Just take every line as-is; no further sorting done
+	push @{$content{$site} }, $msg;
+
+    # *** Everything else goes here
     } else {
 	# This we don't know at all
 	push @{ $unknown{$site} }, $line;
@@ -109,9 +125,11 @@ foreach $site (keys %avlsites) {
     print $site . "\n*************\n\n";
 
     my @k = ( "Modules Installed" , \@install{$site},
-	      "Modules Enabled" , \@enable{$site},
-	      "Modules Disabled" , \@disable{$site},
-	      "Unmatched Entries", \@unknown{$site} );
+	      "Modules Enabled"   , \@enable{$site},
+	      "Modules Disabled"  , \@disable{$site},
+	      "PHP Messages"      , \@php{$site},
+	      "Content Changes"   , \@content{$site},
+	      "Unmatched Entries" , \@unknown{$site} );
 
     while (@k > 0) {
 	my $text = shift @k;
