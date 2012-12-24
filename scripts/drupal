@@ -26,9 +26,10 @@ my $Debug = $ENV{'LOGWATCH_DEBUG'} || 0;
 
 # Each variable is separated by website
 my %install = ();
-my %enable = ();
+my %enable  = ();
 my %disable = ();
 my %unknown = ();
+my %php     = ();
 # This dummy hash just keeps track about all possible sites
 my %avlsites = ();
 
@@ -94,7 +95,7 @@ while(my $line=<STDIN>) {
 
     # *** Now take care about php messages
     } elsif ( $cat eq "php" ) {
-	# ...
+	push @{$php{$site} }, $msg;
     } else {
 	# This we don't know at all
 	push @{ $unknown{$site} }, $line;
