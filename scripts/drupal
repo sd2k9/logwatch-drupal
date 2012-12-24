@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # Copyright 2012 by Robert Lange <robert.lange@s1999.tu-chemnitz.de>
-# Based on script "dpkg", Copyright 2006 by Willi Mann <willi@wm1.at>
-#             and "sshd", Copyright (c) 2008 Kirk Bauer
+# Inspired by script "dpkg", Copyright 2006 by Willi Mann <willi@wm1.at>
+#                and "sshd", Copyright (c) 2008 Kirk Bauer
 ###########################################################################
 # $Id$
 ###########################################################################
@@ -11,20 +11,11 @@
 
 ########################################################
 ## Copyright 2012 by Robert Lange <robert.lange@s1999.tu-chemnitz.de>
-## Based on script "dpkg", Copyright 2008 by Willi Mann <willi@wm1.at>
-##             and "sshd", Copyright (c) 2008 Kirk Bauer
+## Inspired by script "dpkg", Copyright 2008 by Willi Mann <willi@wm1.at>
+##                and "sshd", Copyright (c) 2008 Kirk Bauer
 ## Covered under the included MIT/X-Consortium License:
 ##    http://www.opensource.org/licenses/mit-license.php
-## All modifications and contributions by other persons to
-## this script are assumed to have been donated to the
-## Logwatch project and thus assume the above copyright
-## and licensing terms.  If you want to make contributions
-## under your own copyright or a different license this
-## must be explicitly stated in the contribution an the
-## Logwatch project reserves the right to not accept such
-## contributions.  If you have made significant
-## contributions to this script and want to claim
-## copyright please contact logwatch-devel@logwatch.org.
+## And in parallel under GNU Public License
 #########################################################
 
 use strict;
@@ -42,10 +33,17 @@ my %unknown = ();
 my %avlsites = ();
 
 
-# Parser variables
+# Parser variables - correspondent to following drupal log format specifiers
 my $line;
-my $site;
-my $port;
+my $site;        # !base_url
+my $timestamp;   # !timestamp
+my $cat;         # !type - Category
+my $ip;          # !ip
+my $requri;      # !request_uri
+my $uid;         # !uid
+my $msg;         # !message
+
+
 
 if ( $Debug >= 5 ) {
 	print STDERR "\n\nDEBUG: Inside drupal Filter \n\n";
@@ -61,32 +59,44 @@ while(my $line=<STDIN>) {
     ##     # ...
     ## ) {
     ## } elsif
-    # Remove website and port, remove from line:
-    # Will strip leading: "http://website.org:80|"
-    ($site, $port, $line) = ( $line =~ /^(\w+:\/\/[^:|]+):(\d+)|(.+)$/) or
-	print STDERR "ERROR: Failed to extract site and port from logfile line: $line";
-    $avlsites{$site} = 1;
-    if ( $Debug >= 10 ) {
-	print STDERR "   DEBUG: Got site $site and port $port, remaining line: $line";
+    # *** Break down the log entry into pieces
+    if (not ( ($site, $timestamp, $cat, $ip, $requri, $uid, $msg) = 
+	( $line =~ /^(.+)|(\d+)|([\w\d]+)|([\d\.]+)|(.+)|.+|(\d+)|(.*)|(.+)$/) )) {
+	print STDERR "ERROR: Failed to break down drupal log: $line\n";
+	print STDERR "ERROR: Did you configured the log format correctly?\n";
+	exit(1);
     }
+    $avlsites{$site} = 1;
 
-    # *** Module Management: Install, Enable, Disable
-    # Templates:
-    # \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
-    # \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
-    # \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
-    if ( my ( $module, $action) = ( $line =~ /^\d|system|[\d\.]+|.+|.+|1||(\w+) module (disabled|enabled|installed).$/ )) {
-	if ($action eq "installed") {
-	    push @{$install{$site} }, $module;
-	} elsif ($action eq "enabled") {
-	    push @{$enable{$site} }, $module;
-	} elsif ($action eq "disabled") {
-	    push @{$disable{$site} }, $module;
-	} else {
-	    # Assert; this line cannot be reached
-	    print STDERR "ERROR: Failure in Module management extraction for line \"$line\". This is a bug in the logwatch drupal script.";
+    # *** First of all, System actions
+    if ($cat eq "system" ) {
+	# *** Module Management: Install, Enable, Disable
+	# Templates:
+	# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
+	# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
+	# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
+	# Split down the log message into module and action
+	if ( my ( $module, $action) = ( $msg =~ /^(\w+) module (disabled|enabled|installed).$/ ) ) {
+	    if ($action eq "installed") {
+		push @{$install{$site} }, $module;
+	    } elsif ($action eq "enabled") {
+		push @{$enable{$site} }, $module;
+	    } elsif ($action eq "disabled") {
+		push @{$disable{$site} }, $module;
+	    } else {
+		# Assert; this line cannot be reached
+		print STDERR "ERROR: Failure in Module management extraction for line \"$line\". This is a bug in the logwatch drupal script.";
+	    }
+	} else {  # Unknown action
+	    # This we don't know at all
+	    push @{ $unknown{$site} }, "Unknow system action: $msg";
 	}
+
+    # *** Now take care about php messages
+    } elsif ( $cat eq "php" ) {
+	# ...
     } else {
+	# This we don't know at all
 	push @{ $unknown{$site} }, $line;
     }
 }
