@@ -28,6 +28,10 @@
 #########################################################
 
 use strict;
+# Needed? use Logwatch ':all';
+
+my $Debug = $ENV{'LOGWATCH_DEBUG'} || 0;
+# Not used, see sshd my $Detail = $ENV{'LOGWATCH_DETAIL_LEVEL'} || 0;
 
 # Each variable is separated by website
 my %install = ();
@@ -43,7 +47,14 @@ my $line;
 my $site;
 my $port;
 
+if ( $Debug >= 5 ) {
+	print STDERR "\n\nDEBUG: Inside drupal Filter \n\n";
+}
+
 while(my $line=<STDIN>) {
+    if ( $Debug >= 5 ) {
+	print STDERR "DEBUG: Verbatim log line: $line";
+    }
     chomp $line;
     ## if ( # Matches to ignore
     ## 	($line =~ /^pam_succeed_if: requirement "uid < 100" (not|was) met by user /) or
@@ -55,6 +66,9 @@ while(my $line=<STDIN>) {
     ($site, $port, $line) = ( $line =~ /^(\w+:\/\/[^:|]+):(\d+)|(.+)$/) or
 	print STDERR "ERROR: Failed to extract site and port from logfile line: $line";
     $avlsites{$site} = 1;
+    if ( $Debug >= 10 ) {
+	print STDERR "   DEBUG: Got site $site and port $port, remaining line: $line";
+    }
 
     # *** Module Management: Install, Enable, Disable
     # Templates:
