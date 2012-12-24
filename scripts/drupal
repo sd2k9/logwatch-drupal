@@ -1,0 +1,104 @@
+#!/usr/bin/perl
+# Copyright 2012 by Robert Lange <robert.lange@s1999.tu-chemnitz.de>
+# Based on script "dpkg", Copyright 2006 by Willi Mann <willi@wm1.at>
+#             and "sshd", Copyright (c) 2008 Kirk Bauer
+###########################################################################
+# $Id$
+###########################################################################
+# $Log$
+#
+###########################################################################
+
+########################################################
+## Copyright 2012 by Robert Lange <robert.lange@s1999.tu-chemnitz.de>
+## Based on script "dpkg", Copyright 2008 by Willi Mann <willi@wm1.at>
+##             and "sshd", Copyright (c) 2008 Kirk Bauer
+## Covered under the included MIT/X-Consortium License:
+##    http://www.opensource.org/licenses/mit-license.php
+## All modifications and contributions by other persons to
+## this script are assumed to have been donated to the
+## Logwatch project and thus assume the above copyright
+## and licensing terms.  If you want to make contributions
+## under your own copyright or a different license this
+## must be explicitly stated in the contribution an the
+## Logwatch project reserves the right to not accept such
+## contributions.  If you have made significant
+## contributions to this script and want to claim
+## copyright please contact logwatch-devel@logwatch.org.
+#########################################################
+
+use strict;
+
+# Each variable is separated by website
+my %install = ();
+my %enable = ();
+my %disable = ();
+my %unknown = ();
+# This dummy hash just keeps track about all possible sites
+my %avlsites = ();
+
+
+# Parser variables
+my $line;
+my $site;
+my $port;
+
+while(my $line=<STDIN>) {
+    chomp $line;
+    ## if ( # Matches to ignore
+    ## 	($line =~ /^pam_succeed_if: requirement "uid < 100" (not|was) met by user /) or
+    ##     # ...
+    ## ) {
+    ## } elsif
+    # Remove website and port, remove from line:
+    # Will strip leading: "http://website.org:80|"
+    ($site, $port, $line) = ( $line =~ /^(\w+:\/\/[^:|]+):(\d+)|(.+)$/) or
+	print STDERR "ERROR: Failed to extract site and port from logfile line: $line";
+    $avlsites{$site} = 1;
+
+    # *** Module Management: Install, Enable, Disable
+    # Templates:
+    # \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
+    # \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
+    # \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
+    if ( my ( $module, $action) = ( $line =~ /^\d|system|[\d\.]+|.+|.+|1||(\w+) module (disabled|enabled|installed).$/ )) {
+	if ($action eq "installed") {
+	    push @{$install{$site} }, $module;
+	} elsif ($action eq "enabled") {
+	    push @{$enable{$site} }, $module;
+	} elsif ($action eq "disabled") {
+	    push @{$disable{$site} }, $module;
+	} else {
+	    # Assert; this line cannot be reached
+	    print STDERR "ERROR: Failure in Module management extraction for line \"$line\". This is a bug in the logwatch drupal script.";
+	}
+    } else {
+	push @{ $unknown{$site} }, $line;
+    }
+}
+
+
+# ** Output collected information
+foreach $site (keys %avlsites) {
+    # For each site
+    print $site . "\n*************\n\n";
+
+    my @k = ( "Modules Installed" , \@install{$site},
+	      "Modules Enabled" , \@enable{$site},
+	      "Modules Disabled" , \@disable{$site},
+	      "Unmatched Entries", \@unknown{$site} );
+
+    while (@k > 0) {
+	my $text = shift @k;
+	my $array = shift @k;
+	if(@$array) {
+		print "\n$text:\n";
+		foreach my $line (sort @$array) {
+			print "   $line\n";
+		}
+
+	}
+    }
+}
+
+
