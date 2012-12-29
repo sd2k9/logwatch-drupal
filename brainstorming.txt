@@ -1,3 +1,15 @@
+Debug Running
+*************
+- For Debian
+- For devel link the files into logwatch configuration directory
+  cd /etc/logwatch/scripts/services; sudo ln -s <git_basedir>/scripts/drupal
+  cd /etc/logwatch/conf/logfiles; sudo ln -s <git_basedir>/conf/logfiles/drupal
+  cd /etc/logwatch/conf/services -s <git_basedir>/conf/services/drupal
+- Run logwatch
+  clear && logwatch --service drupal --range All --logdir ../logs/ --debug high --filename drupal-logwatch.txt
+
+
+
 Logwatch
 ********
 - Take an often used file as base, like ssh or dpkg
