@@ -62,10 +62,13 @@ while(my $line=<STDIN>) {
     ## ) {
     ## } elsif
     # *** Break down the log entry into pieces
-    if (not ( ($site, $timestamp, $cat, $ip, $requri, $uid, $msg) = 
-	( $line =~ /^(.+)|(\d+)|([\w\d]+)|([\d\.]+)|(.+)|.+|(\d+)|(.*)|(.+)$/) )) {
+    ($site, $timestamp, $cat, $ip, $requri, $uid, $msg) = 
+	( $line =~ /^([^|]+)\|(\d+)\|([\w\d\s]+)\|([\d\.]+)\|(.+)\|.*\|(\d+)\|(?:[^|]*)\|(.+)$/);
+    if (not $msg ) {  # Parsing failed
 	print STDERR "ERROR: Failed to break down drupal log: $line\n";
 	print STDERR "ERROR: Did you configured the log format correctly?\n";
+	# Detailed Debug
+	# print STDERR "DBG $line\n$site\n$timestamp\n$cat\n$ip\n$requri\n$uid\n$msg\n\n";
 	exit(1);
     }
     $avlsites{$site} = 1;
