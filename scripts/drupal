@@ -83,10 +83,19 @@ while(my $line=<STDIN>) {
 	# Split down the log message into module and action
 	if ( my ( $module, $action) = ( $msg =~ /^(\w+) module (disabled|enabled|installed).$/ ) ) {
 	    if ($action eq "installed") {
+		if ( $Debug >= 5 ) {
+		    print STDERR "DEBUG:    Sorted as installed message for module $module\n";
+		}
 		push @{$install{$site} }, $module;
 	    } elsif ($action eq "enabled") {
+		if ( $Debug >= 5 ) {
+		    print STDERR "DEBUG:    Sorted as enabled message for module $module\n";
+		}
 		push @{$enable{$site} }, $module;
 	    } elsif ($action eq "disabled") {
+		if ( $Debug >= 5 ) {
+		    print STDERR "DEBUG:    Sorted as disabled message for module $module\n";
+		}
 		push @{$disable{$site} }, $module;
 	    } else {
 		# Assert; this line cannot be reached
@@ -94,13 +103,19 @@ while(my $line=<STDIN>) {
 	    }
 	} else {  # Unknown action
 	    # This we don't know at all
-	    push @{ $unknown{$site} }, "Unknow system action: $msg";
+	    if ( $Debug >= 5 ) {
+		print STDERR "DEBUG:    Unknown system action: $msg\n";
+	    }
+	    push @{ $unknown{$site} }, "Unknown system action: $msg";
 	}
 
     # *** Now take care about php messages
     } elsif ( $cat eq "php" ) {
 	# Template:
 	# https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$argument in calendar_plugin_style->query() (line 129 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
+	if ( $Debug >= 5 ) {
+	    print STDERR "DEBUG:    PHP message found: $msg\n";
+	}
 	push @{$php{$site} }, $msg;
 
     # *** And now let's go for content modification
@@ -112,11 +127,19 @@ while(my $line=<STDIN>) {
         # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/32/delete|https://website.org:8443/en/node/32/delete|3||page: deleted Folgen.
         # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/admin/content|https://website.org:8443/en/admin/content|3||Deleted 13 posts.
         # First simple approach: Just take every line as-is; no further sorting done
+	if ( $Debug >= 5 ) {
+	    print STDERR "DEBUG:    Content modification message found: $msg\n";
+	}
 	push @{$content{$site} }, $msg;
+
+    # *** TODO - other message types are still missing
 
     # *** Everything else goes here
     } else {
 	# This we don't know at all
+	if ( $Debug >= 5 ) {
+	    print STDERR "DEBUG:    Sorted as unknown: $line\n";
+	}
 	push @{ $unknown{$site} }, $line;
     }
 }
@@ -125,18 +148,20 @@ while(my $line=<STDIN>) {
 # ** Output collected information
 foreach $site (keys %avlsites) {
     # For each site
-    print $site . "\n*************\n\n";
+    print "\n" . $site . "\n*************************\n\n";
 
-    my @k = ( "Modules Installed" , \@install{$site},
-	      "Modules Enabled"   , \@enable{$site},
-	      "Modules Disabled"  , \@disable{$site},
-	      "PHP Messages"      , \@php{$site},
-	      "Content Changes"   , \@content{$site},
-	      "Unmatched Entries" , \@unknown{$site} );
+    #          Name                 Array to content - undef when not available
+    my @k = ( "Modules Installed" , @install{$site},
+	      "Modules Enabled"   , @enable{$site},
+	      "Modules Disabled"  , @disable{$site},
+	      "PHP Messages"      , @php{$site},
+	      "Content Changes"   , @content{$site},
+	      "Unmatched Entries" , @unknown{$site} );
 
     while (@k > 0) {
 	my $text = shift @k;
 	my $array = shift @k;
+	next unless $array;   # Skip undef lines (means no entries here)
 	if(@$array) {
 		print "\n$text:\n";
 		foreach my $line (sort @$array) {
