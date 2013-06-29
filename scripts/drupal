@@ -25,13 +25,17 @@ my $Debug = $ENV{'LOGWATCH_DEBUG'} || 0;
 # Not used, see sshd my $Detail = $ENV{'LOGWATCH_DETAIL_LEVEL'} || 0;
 
 # Each variable is separated by website
-my %install = ();
-my %enable  = ();
-my %disable = ();
-my %unknown = ();
-my %php     = ();
-my %content = ();
-# This dummy hash just keeps track about all possible sites
+my %install   = ();
+my %uninstall = ();
+my %enable    = ();
+my %disable   = ();
+my %php       = ();
+my %content   = ();
+my %cron      = ();
+my %user      = ();
+my %page_not_found = ();
+my %unknown   = ();
+# This dummy hash just keeps track of all possible sites
 my %avlsites = ();
 
 
@@ -42,7 +46,9 @@ my $timestamp;   # !timestamp
 my $cat;         # !type - Category
 my $ip;          # !ip
 my $requri;      # !request_uri
+my $referrer;    # !referrer
 my $uid;         # !uid
+my $link;        # !link
 my $msg;         # !message
 
 
@@ -62,45 +68,51 @@ while(my $line=<STDIN>) {
     ## ) {
     ## } elsif
     # *** Break down the log entry into pieces
-    ($site, $timestamp, $cat, $ip, $requri, $uid, $msg) = 
-	( $line =~ /^([^|]+)\|(\d+)\|([\w\d\s]+)\|([\d\.]+)\|(.+)\|.*\|(\d+)\|(?:[^|]*)\|(.+)$/);
-    if (not $msg ) {  # Parsing failed
-	print STDERR "ERROR: Failed to break down drupal log: $line\n";
-	print STDERR "ERROR: Did you configured the log format correctly?\n";
-	# Detailed Debug
-	# print STDERR "DBG $line\n$site\n$timestamp\n$cat\n$ip\n$requri\n$uid\n$msg\n\n";
-	exit(1);
+    ($site, $timestamp, $cat, $ip, $requri, $referrer, $uid, $link, $msg) = 
+		$line =~ /^(.+)\|(.+)\|(.+)\|(.+)\|(.+)\|(.*)\|(.+)\|(.*)\|(.+)/;
+	#( $line =~ /^([^|]+)\|(\d+)\|([\w\d\s]+)\|([\d\.]+)\|(.+)\|.*\|(\d+)\|(?:[^|]*)\|(.+)$/);
+    if (not $msg) {  # Parsing failed
+		print STDERR "ERROR: Failed to break down drupal log: [$line]\n";
+		print STDERR "ERROR: Did you configured the log format correctly?\n";
+		# Detailed Debug
+		print STDERR "DBG [$site]\n[$timestamp]\n[$cat]\n[$ip]\n[$requri]\n[$referrer]\n[$uid]\n[$link]\n[$msg]\n\n";
+		exit(1);
     }
     $avlsites{$site} = 1;
 
     # *** First of all, System actions
-    if ($cat eq "system" ) {
-	# *** Module Management: Install, Enable, Disable
-	# Templates:
-	# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
-	# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
-	# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
-	# Split down the log message into module and action
-	if ( my ( $module, $action) = ( $msg =~ /^(\w+) module (disabled|enabled|installed).$/ ) ) {
-	    if ($action eq "installed") {
-		if ( $Debug >= 5 ) {
-		    print STDERR "DEBUG:    Sorted as installed message for module $module\n";
-		}
-		push @{$install{$site} }, $module;
-	    } elsif ($action eq "enabled") {
-		if ( $Debug >= 5 ) {
-		    print STDERR "DEBUG:    Sorted as enabled message for module $module\n";
-		}
-		push @{$enable{$site} }, $module;
-	    } elsif ($action eq "disabled") {
-		if ( $Debug >= 5 ) {
-		    print STDERR "DEBUG:    Sorted as disabled message for module $module\n";
-		}
-		push @{$disable{$site} }, $module;
-	    } else {
-		# Assert; this line cannot be reached
-		print STDERR "ERROR: Failure in Module management extraction for line \"$line\". This is a bug in the logwatch drupal script.";
-	    }
+    if ($cat eq 'system' ) {
+		# *** Module Management: Install, Uninstall, Enable, Disable
+		# Templates:
+		# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module installed.
+		# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||syslog module enabled.
+		# \d+|system|10.0.2.2|http://website.org:8080/admin/modules/list/confirm?render=overlay|http://website.org:8080/admin/modules?render=overlay|1||dblog module disabled.
+		# Split down the log message into module and action
+		if ( my ( $module, $action) = ( $msg =~ /^(\w+) module (disabled|enabled|installed|uninstalled).$/ ) ) {
+			if ($action eq 'installed') {
+			    if ( $Debug >= 5 ) {
+				print STDERR "DEBUG:    Sorted as installed message for module $module\n";
+			    }
+			    push @{$install{$site} }, $module;
+			} elsif ($action eq 'uninstalled') {
+			    if ( $Debug >= 5 ) {
+				print STDERR "DEBUG:    Sorted as uninstalled message for module $module\n";
+			    }
+				push @{$uninstall{$site} }, $module;
+			} elsif ($action eq 'enabled') {
+			    if ( $Debug >= 5 ) {
+				print STDERR "DEBUG:    Sorted as enabled message for module $module\n";
+			    }
+			    push @{$enable{$site} }, $module;
+			} elsif ($action eq 'disabled') {
+			    if ( $Debug >= 5 ) {
+				print STDERR "DEBUG:    Sorted as disabled message for module $module\n";
+			    }
+			    push @{$disable{$site} }, $module;
+			} else {
+				# Assert; this line cannot be reached
+				print STDERR "ERROR: Failure in Module management extraction for line \"$line\". This is a bug in the logwatch drupal script.";
+			}
 	} else {  # Unknown action
 	    # This we don't know at all
 	    if ( $Debug >= 5 ) {
@@ -110,7 +122,7 @@ while(my $line=<STDIN>) {
 	}
 
     # *** Now take care about php messages
-    } elsif ( $cat eq "php" ) {
+    } elsif ( $cat eq 'php' ) {
 	# Template:
 	# https://website.org:8443|\d+|php|10.0.2.2|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1/ajax|https://website.org:8443/en/admin/structure/views/view/calendar/edit/calendar_1|3||Notice: Undefined property: date_views_argument_handler_simple::$argument in calendar_plugin_style->query() (line 129 of /home/drupal/drupal7/sites/all/modules/calendar/includes/calendar_plugin_style.inc).
 	if ( $Debug >= 5 ) {
@@ -118,9 +130,9 @@ while(my $line=<STDIN>) {
 	}
 	push @{$php{$site} }, $msg;
 
-    # *** And now let's go for content modification
-    } elsif ( $cat eq "content" ) {
-	# Template:
+	# *** And now let's go for content modification
+    } elsif ( $cat eq 'content' ) {
+		# Template:
         # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/add/page|https://website.org:8443/en/node/add/page|3|view|page: added Folgen.
         # http://website.org:8080|\d+|content|10.0.2.2|http://website.org:8080/node/1/edit|http://website.org:8080/node/1/edit|2|view|page: updated Impressum.
         # https://website.org:8443|\d+|content|10.0.2.2|https://website.org:8443/en/node/10/revisions/11/delete|https://website.org:8443/en/node/10/revisions/11/delete|3||image_container: deleted User Pictures revision 11.
@@ -132,9 +144,28 @@ while(my $line=<STDIN>) {
 	}
 	push @{$content{$site} }, $msg;
 
-    # *** TODO - other message types are still missing
+    } elsif ( $cat eq 'cron' ) {
+        # First simple approach: Just take every line as-is; no further sorting done
+	if ( $Debug >= 5 ) {
+	    print STDERR "DEBUG:    Cron message found: $msg\n";
+	}
+	push @{$cron{$site} }, $msg;
 
-    # *** Everything else goes here
+    } elsif ( $cat eq 'user' ) {
+        # First simple approach: Just take every line as-is; no further sorting done
+	if ( $Debug >= 5 ) {
+	    print STDERR "DEBUG:    User message found: $msg\n";
+	}
+	push @{$user{$site} }, $msg;
+
+    } elsif ( $cat eq 'page not found' ) {
+        # First simple approach: Just take every line as-is; no further sorting done
+	if ( $Debug >= 5 ) {
+	    print STDERR "DEBUG:    Page-not-found message found: $msg\n";
+	}
+	push @{$page_not_found{$site} }, $msg;
+
+		# *** Everything else goes here
     } else {
 	# This we don't know at all
 	if ( $Debug >= 5 ) {
@@ -148,27 +179,29 @@ while(my $line=<STDIN>) {
 # ** Output collected information
 foreach $site (keys %avlsites) {
     # For each site
-    print "\n" . $site . "\n*************************\n\n";
+    print "\n\n$site\n***************************\n";
 
-    #          Name                 Array to content - undef when not available
-    my @k = ( "Modules Installed" , @install{$site},
-	      "Modules Enabled"   , @enable{$site},
-	      "Modules Disabled"  , @disable{$site},
-	      "PHP Messages"      , @php{$site},
-	      "Content Changes"   , @content{$site},
-	      "Unmatched Entries" , @unknown{$site} );
+    my @site_log = ( 'Modules Installed'  , $install{$site},
+                     'Modules Uninstalled', $uninstall{$site},
+		     'Modules Enabled'    , $enable{$site},
+		     'Modules Disabled'   , $disable{$site},
+		     'PHP Messages'       , $php{$site},
+		     'Content Changes'    , $content{$site},
+		     'Cron Activity'      , $cron{$site},
+		     'User Activity'      , $user{$site},
+		     'Page Not Found'     , $page_not_found{$site},
+		     'Unmatched Entries'  , $unknown{$site} );
 
-    while (@k > 0) {
-	my $text = shift @k;
-	my $array = shift @k;
-	next unless $array;   # Skip undef lines (means no entries here)
-	if(@$array) {
-		print "\n$text:\n";
-		foreach my $line (sort @$array) {
-			print "   $line\n";
+    while (@site_log > 0) {
+		my $title = shift @site_log;
+		my $array = shift @site_log;
+		next unless $array;   # Skip undef lines (means no entries here)
+		if(@$array) {   # Only when we have some content here
+			print "\n$title:\n";
+			foreach my $line (sort @$array) {
+				print "   $line\n";
+			}
 		}
-
-	}
     }
 }
 

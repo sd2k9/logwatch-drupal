@@ -10,3 +10,11 @@ so I don't waste my time :-)
 
 Otherwise - feel free to contribute.
 
+
+State
+-----
+Ongoing development (actually currently suspended because of other projects).
+
+Correct function (or function at all) is not given at this time.
+Feel free to take as a starting point, and feed me back any improvements you make.
+Thanks!
