@@ -15,6 +15,6 @@ State
 -----
 Ongoing development (actually currently suspended because of other projects).
 
-Correct function (or function at all) is not given at this time.
-Feel free to take as a starting point, and feed me back any improvements you make.
+Correct function (or function at all) is not guaranteed at this time.
+Take it as a starting point, and feed me back any improvements you make.
 Thanks!
