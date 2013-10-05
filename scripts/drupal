@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Copyright 2012 by Robert Lange <robert.lange@s1999.tu-chemnitz.de>
+# Copyright 2012 by Robert Lange <sd2k9@sethdepot.org>
 # Inspired by script "dpkg", Copyright 2006 by Willi Mann <willi@wm1.at>
 #                and "sshd", Copyright (c) 2008 Kirk Bauer
 ###########################################################################
@@ -10,7 +10,7 @@
 ###########################################################################
 
 ########################################################
-## Copyright 2012 by Robert Lange <robert.lange@s1999.tu-chemnitz.de>
+## Copyright 2012 by Robert Lange <sd2k9@sethdepot.org>
 ## Inspired by script "dpkg", Copyright 2008 by Willi Mann <willi@wm1.at>
 ##                and "sshd", Copyright (c) 2008 Kirk Bauer
 ## Covered under the included MIT/X-Consortium License:
